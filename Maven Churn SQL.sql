@@ -243,7 +243,38 @@ AND churn_reason IN ('Competitor had better devices','Competitor offered higher 
 AND internet_type = 'fiber optic';
 
 -- That returned 442. 5 people left it blank. so fiberoptic internet type COULD be the reason for 442 people leave. This makes up 67%....
+-- I separated my excel into more table to play with some joins haha
+-- lets see 
 
+SELECT 
+    gender, age, dependents, married, contract, payment_method
+FROM
+    churn.personal
+        LEFT JOIN
+    churn.payment ON churn.personal.customer_id = churn.payment.customer_id
+WHERE
+    dependents = 'dependents'
+        AND contract NOT IN ('two year' , 'one year');
+        
+
+-- Im going to play with the count and case method to see if i can recreate a pivot table
+-- I am going to start off easy and using churn status and dependents
+
+SELECT 
+    dependents,
+    COUNT(CASE
+        WHEN customer_status NOT IN ('churned') THEN customer_status
+        ELSE NULL
+    END) AS active_customer,
+    COUNT(CASE
+        WHEN customer_status IN ('churned') THEN customer_status
+        ELSE NULL
+    END) AS not_active_customer
+FROM
+    churn.personal
+        LEFT JOIN
+    churn.status ON churn.personal.customer_id = churn.status.customer_id
+GROUP BY dependents;
 
 
 
