@@ -315,16 +315,13 @@ FROM
     churn.status ON churn.personal.customer_id = churn.status.customer_id
 GROUP BY dependents;
 
--- im going to play with some sub query's
-
+-- time to see which churned customers are high priority. These customers just bring us too much revenue
 
 SELECT 
-    total_revenue, customer_status
+    customer_id, total_revenue, customer_status
 FROM
-    churn.payment
-        LEFT JOIN
-    churn.status ON churn.status.customer_id = churn.status.customer_id
+    churn.challenge
 WHERE
-    total_revenue > 1000
-        AND customer_status IN ('churned')
-ORDER BY total_revenue
+    total_revenue > 5000
+        AND customer_status = 'churned'
+ORDER BY customer_id
