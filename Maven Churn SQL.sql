@@ -1,5 +1,12 @@
+
+USE churn;
+
 SELECT 
-    gender,married,internet_service,customer_status,churn_reason
+    gender,
+    married,
+    internet_service,
+    customer_status,
+    churn_reason
 FROM
     churn.challenge
 WHERE
@@ -10,7 +17,13 @@ WHERE
 -- 
 
 SELECT 
-    gender,married,age,tenure_in_months,internet_service,customer_status,churn_reason
+    gender,
+    married,
+    age,
+    tenure_in_months,
+    internet_service,
+    customer_status,
+    churn_reason
 FROM
     churn.challenge
 WHERE
@@ -24,7 +37,8 @@ ORDER BY tenure_in_months DESC;
 -- The below Query is to see about our loyalty program
 
 SELECT 
-    customer_status,number_of_referrals,
+    customer_status,
+    number_of_referrals,
     CASE
         WHEN number_of_referrals > 0 THEN 'Send Loyalty Reward'
         WHEN number_of_referrals = 0 THEN 'Send Loyalty Offer'
@@ -41,7 +55,8 @@ ORDER BY number_of_referrals DESC
 -- THe first query is for pre-adutlhood who stayed and joined. The return was 310 out of 5174 who either stayed or joined. 
 
 SELECT 
-    age,customer_status,
+    age,
+    customer_status,
     CASE
         WHEN age >= 65 THEN 'Late Adulthood'
         WHEN age >= 45 THEN 'Late Middle Age'
@@ -60,7 +75,8 @@ ORDER BY age DESC;
 -- THe Second  query is for early adulthood who stayed and joined. The return was 1257 out of 5174 who either stayed or joined. 
 
 SELECT 
-    age,customer_status,
+    age,
+    customer_status,
     CASE
         WHEN age >= 65 THEN 'Late Adulthood'
         WHEN age >= 45 THEN 'Late Middle Age'
@@ -79,7 +95,8 @@ ORDER BY age DESC;
 -- THe Second  query is for early middle age who stayed and joined. The return was 998 out of 5174 who either stayed or joined. 
 
 SELECT 
-    age,customer_status,
+    age,
+    customer_status,
     CASE
         WHEN age >= 65 THEN 'Late Adulthood'
         WHEN age >= 45 THEN 'Late Middle Age'
@@ -98,7 +115,8 @@ ORDER BY age DESC;
 -- THe Second  query is for late middle age who stayed and joined. The return was 1943 out of 5174 who either stayed or joined. 
 
 SELECT 
-    age,customer_status,
+    age,
+    customer_status,
     CASE
         WHEN age >= 65 THEN 'Late Adulthood'
         WHEN age >= 45 THEN 'Late Middle Age'
@@ -117,7 +135,8 @@ ORDER BY age DESC;
 -- THe Second  query is for late middle age who stayed and joined. The return was 666 out of 5174 who either stayed or joined. 
 
 SELECT 
-    age,customer_status,
+    age,
+    customer_status,
     CASE
         WHEN age >= 65 THEN 'Late Adulthood'
         WHEN age >= 45 THEN 'Late Middle Age'
@@ -137,7 +156,8 @@ ORDER BY age DESC;
 -- I am going to see married couples and then compare them to married couples with dependants and married couples without dependants. 
 
 SELECT 
-    married,customer_status,
+    married,
+    customer_status,
     CASE
         WHEN number_of_dependents > 0 THEN 'Have Dependents'
         WHEN number_of_dependents = 0 THEN 'Zero Dependents'
@@ -152,7 +172,9 @@ WHERE
 -- This is a real problem. Less than 20% of our customers have dependents. We need a better family plan
 
 SELECT 
-    married,customer_status,multiple_lines,
+    married,
+    customer_status,
+    multiple_lines,
     CASE
         WHEN number_of_dependents > 0 THEN 'Have Dependents'
         WHEN number_of_dependents = 0 THEN 'Zero Dependents'
@@ -168,7 +190,10 @@ WHERE
 -- this is an even bigger problem. of the people 1006 people with dependents that use our service, only 399 have multiple lines. 
 
 SELECT 
-    married,customer_status,multiple_lines,contract,
+    married,
+    customer_status,
+    multiple_lines,
+    contract,
     CASE
         WHEN number_of_dependents > 0 THEN 'Have Dependents'
         WHEN number_of_dependents = 0 THEN 'Zero Dependents'
@@ -315,13 +340,84 @@ FROM
     churn.status ON churn.personal.customer_id = churn.status.customer_id
 GROUP BY dependents;
 
--- time to see which churned customers are high priority. These customers just bring us too much revenue
+-- im going to play with some sub query's
+
 
 SELECT 
-    customer_id, total_revenue, customer_status
+    status.customer_id, total_revenue, customer_status
 FROM
-    churn.challenge
+    churn.payment
+        LEFT JOIN
+    churn.status ON churn.status.customer_id = churn.status.customer_id
 WHERE
     total_revenue > 5000
-        AND customer_status = 'churned'
-ORDER BY customer_id
+        AND customer_status = 'churned';
+
+-- looking to find churn rate
+
+SELECT 
+    (COUNT(CASE
+        WHEN customer_status IN ('churned') THEN customer_status
+    END) / COUNT(status.customer_id)) AS churn
+FROM
+    churn.status
+        JOIN
+    churn.payment ON churn.status.customer_id = churn.payment.customer_id;
+
+-- Diving into 
+
+SELECT 
+    contract AS Contract_Type,
+    ROUND(AVG(monthly_charge), 2) AS Monthly_Payment,
+    (COUNT(CASE
+        WHEN customer_status IN ('churned') THEN customer_status
+    END) / COUNT(DISTINCT status.customer_id)) AS Churn_percentage
+FROM
+    churn.status
+        JOIN
+    churn.payment ON churn.status.customer_id = churn.payment.customer_id
+GROUP BY 1
+ORDER BY 3 DESC;
+
+SELECT 
+    status.customer_id AS customer,
+    CASE
+        WHEN number_of_dependents >= 1 THEN 'Yes'
+        ELSE 'No'
+    END dependents,
+    CASE
+        WHEN customer_status IN ('stayed' , 'joined') THEN 'current_customer'
+        ELSE 'past_customer'
+    END customer_status
+FROM
+    churn.personal
+        JOIN
+    churn.status ON churn.personal.customer_id = churn.status.customer_id
+WHERE
+    number_of_dependents < 1
+        AND customer_status NOT IN ('stayed' , 'joined')
+ORDER BY status.customer_id;
+
+SELECT
+status.customer_id,number_of_dependents AS dependents, customer_status AS Status,
+COUNT(contract) OVER (partition by customer_id)AS customer
+FROM  
+churn.status
+LEFT JOIN churn.personal
+ON churn.status.customer_id = churn.personal.customer_id
+LEFT JOIN churn.payment
+ON churn.status.customer_id = churn.payment.customer_id
+WHERE contract IN ('month-to-month');
+
+--
+
+
+
+
+
+
+
+
+
+
+
